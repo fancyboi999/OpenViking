@@ -510,6 +510,37 @@ async def test_find_with_context_type_compiles_filter(
     assert captured["filter"] == {"op": "must", "field": "context_type", "conds": ["memory"]}
 
 
+async def test_find_combines_tags_with_existing_filter(
+    client: httpx.AsyncClient, service, monkeypatch
+):
+    captured = {}
+
+    async def fake_find(*, filter=None, **kwargs):
+        captured["filter"] = filter
+        return {"items": []}
+
+    monkeypatch.setattr(service.search, "find", fake_find)
+
+    resp = await client.post(
+        "/api/v1/search/find",
+        json={
+            "query": "sample",
+            "filter": {"op": "must", "field": "kind", "conds": ["email"]},
+            "tags": ["Env=Prod", " env=prod "],
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    assert captured["filter"] == {
+        "op": "and",
+        "conds": [
+            {"op": "must", "field": "kind", "conds": ["email"]},
+            {"op": "must", "field": "search_tags", "conds": ["env=prod"]},
+        ],
+    }
+
+
 async def test_search_combines_context_type_list_with_existing_filter(
     client: httpx.AsyncClient, service, monkeypatch
 ):
@@ -541,6 +572,29 @@ async def test_search_combines_context_type_list_with_existing_filter(
     }
 
 
+async def test_search_compiles_tags_only_filter(client: httpx.AsyncClient, service, monkeypatch):
+    captured = {}
+
+    async def fake_search(*, filter=None, **kwargs):
+        captured["filter"] = filter
+        return {"items": []}
+
+    monkeypatch.setattr(service.search, "search", fake_search)
+
+    resp = await client.post(
+        "/api/v1/search/search",
+        json={"query": "sample", "tags": ["Team=Search"]},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    assert captured["filter"] == {
+        "op": "must",
+        "field": "search_tags",
+        "conds": ["team=search"],
+    }
+
+
 async def test_find_with_invalid_context_type_returns_invalid_argument(client: httpx.AsyncClient):
     resp = await client.post(
         "/api/v1/search/find",
@@ -552,6 +606,18 @@ async def test_find_with_invalid_context_type_returns_invalid_argument(client: h
     assert body["status"] == "error"
     assert body["error"]["code"] == "INVALID_ARGUMENT"
     assert "context_type" in body["error"]["message"]
+
+
+async def test_search_rejects_invalid_kv_tags(client: httpx.AsyncClient):
+    resp = await client.post(
+        "/api/v1/search/search",
+        json={"query": "sample", "tags": ["team-search"]},
+    )
+
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["status"] == "error"
+    assert body["error"]["code"] == "INVALID_ARGUMENT"
 
 
 async def test_find_with_invalid_time_returns_invalid_argument(client: httpx.AsyncClient):

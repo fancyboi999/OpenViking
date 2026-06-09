@@ -215,6 +215,26 @@ impl HttpClient {
         self.post("/api/v1/content/write", &body).await
     }
 
+    pub async fn set_tags(
+        &self,
+        uri: &str,
+        tags: Vec<String>,
+        mode: &str,
+        recursive: bool,
+        wait: bool,
+        timeout: Option<f64>,
+    ) -> Result<serde_json::Value> {
+        let body = serde_json::json!({
+            "uri": uri,
+            "tags": tags,
+            "mode": mode,
+            "recursive": recursive,
+            "wait": wait,
+            "timeout": timeout,
+        });
+        self.post("/api/v1/content/set_tags", &body).await
+    }
+
     fn build_write_body(
         uri: &str,
         content: &str,
@@ -400,6 +420,8 @@ impl HttpClient {
         time_field: Option<String>,
         level: Option<Vec<i32>>,
         context_type: Option<Vec<String>>,
+        tags: Option<Vec<String>>,
+        peer_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let mut body = serde_json::json!({
             "query": query,
@@ -411,6 +433,8 @@ impl HttpClient {
             "time_field": time_field,
             "level": level,
             "context_type": context_type,
+            "tags": tags,
+            "peer_id": peer_id,
         });
         self.attach_legacy_agent_scope(&mut body);
         self.post("/api/v1/search/find", &body).await
@@ -428,6 +452,8 @@ impl HttpClient {
         time_field: Option<String>,
         level: Option<Vec<i32>>,
         context_type: Option<Vec<String>>,
+        tags: Option<Vec<String>>,
+        peer_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let mut body = serde_json::json!({
             "query": query,
@@ -440,6 +466,8 @@ impl HttpClient {
             "time_field": time_field,
             "level": level,
             "context_type": context_type,
+            "tags": tags,
+            "peer_id": peer_id,
         });
         self.attach_legacy_agent_scope(&mut body);
         self.post("/api/v1/search/search", &body).await

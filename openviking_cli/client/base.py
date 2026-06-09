@@ -158,6 +158,20 @@ class BaseClient(ABC):
         """Write text content to an existing file and refresh semantics/vectors."""
         ...
 
+    @abstractmethod
+    async def set_tags(
+        self,
+        uri: str,
+        tags: List[str],
+        mode: str = "replace",
+        recursive: bool = False,
+        wait: bool = False,
+        timeout: Optional[float] = None,
+        telemetry: TelemetryRequest = False,
+    ) -> Dict[str, Any]:
+        """Replace explicit retrieval tags for a file or directory."""
+        ...
+
     # ============= Search =============
 
     @abstractmethod
@@ -169,6 +183,7 @@ class BaseClient(ABC):
         score_threshold: Optional[float] = None,
         filter: Optional[Dict] = None,
         context_type: Optional[SearchContextTypeInput] = None,
+        tags: Optional[List[str]] = None,
         telemetry: TelemetryRequest = False,
     ) -> Any:
         """Semantic search without session context."""
@@ -184,6 +199,7 @@ class BaseClient(ABC):
         score_threshold: Optional[float] = None,
         filter: Optional[Dict] = None,
         context_type: Optional[SearchContextTypeInput] = None,
+        tags: Optional[List[str]] = None,
         telemetry: TelemetryRequest = False,
     ) -> Any:
         """Semantic search with optional session context."""
