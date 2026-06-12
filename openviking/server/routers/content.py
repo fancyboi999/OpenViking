@@ -41,7 +41,7 @@ class WriteContentRequest(BaseModel):
 
 
 class SetTagsRequest(BaseModel):
-    """Request to set explicit k=v retrieval tags for a file or directory."""
+    """Request to set explicit k=v retrieval tags metadata for a file or directory."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -217,7 +217,7 @@ async def set_tags(
     request: SetTagsRequest = Body(...),
     _ctx: RequestContext = Depends(get_request_context),
 ):
-    """Set explicit k=v retrieval tags for a file or directory semantic nodes."""
+    """Set explicit k=v retrieval tags metadata for a file or directory."""
     service = get_service()
     uri = resolve_path_variables(request.uri)
     execution = await run_operation(

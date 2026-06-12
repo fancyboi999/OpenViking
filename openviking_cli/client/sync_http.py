@@ -460,7 +460,7 @@ class SyncHTTPClient:
         timeout: Optional[float] = None,
         telemetry: TelemetryRequest = False,
     ) -> Dict[str, Any]:
-        """Replace explicit retrieval tags for a file or directory."""
+        """Update explicit retrieval tags metadata for a file or directory."""
         return run_async(
             self._async_client.set_tags(
                 uri=uri,

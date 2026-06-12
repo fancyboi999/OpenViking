@@ -728,7 +728,7 @@ class AsyncHTTPClient(BaseClient):
         timeout: Optional[float] = None,
         telemetry: TelemetryRequest = False,
     ) -> Dict[str, Any]:
-        """Replace explicit retrieval tags for a file or directory."""
+        """Update explicit retrieval tags metadata for a file or directory."""
         telemetry = self._validate_telemetry(telemetry)
         uri = VikingURI.normalize(uri)
         response = await self._http.post(

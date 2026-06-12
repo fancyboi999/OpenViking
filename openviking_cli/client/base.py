@@ -169,7 +169,7 @@ class BaseClient(ABC):
         timeout: Optional[float] = None,
         telemetry: TelemetryRequest = False,
     ) -> Dict[str, Any]:
-        """Replace explicit retrieval tags for a file or directory."""
+        """Update explicit retrieval tags metadata for a file or directory."""
         ...
 
     # ============= Search =============

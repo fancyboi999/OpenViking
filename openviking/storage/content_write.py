@@ -181,13 +181,7 @@ class ContentWriteCoordinator:
         context_type: str,
         tags: list[str],
         mode: str,
-        wait: bool,
-        queue_status: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        semantic_status, vector_status = self._refresh_statuses(
-            wait=wait,
-            queue_status=queue_status,
-        )
         return {
             "uri": uri,
             "updated_uris": updated_uris,
@@ -199,9 +193,6 @@ class ContentWriteCoordinator:
             "skipped_count": skipped_count,
             "failed_count": failed_count,
             "tags_updated": True,
-            "semantic_status": semantic_status,
-            "vector_status": vector_status,
-            "queue_status": queue_status,
         }
 
     def _refresh_statuses(
@@ -613,19 +604,12 @@ class ContentWriteCoordinator:
         wait: bool,
         timeout: Optional[float],
     ) -> Dict[str, Any]:
+        del recursive, wait, timeout
         context_type = context_type_for_uri(uri)
         root_uri = await self._resolve_root_uri(uri, ctx=ctx)
         updated_uri = await self._upsert_uri_tags(uri=uri, tags=tags, mode=mode, ctx=ctx)
         if not updated_uri:
             raise NotFoundError(uri, "vector record")
-        queue_status = await self._refresh_tags_semantics(
-            root_uri=root_uri,
-            changed_uri=updated_uri,
-            context_type=context_type,
-            ctx=ctx,
-            wait=wait,
-            timeout=timeout,
-        )
         return self._build_tags_result(
             uri=uri,
             updated_uris=[updated_uri],
@@ -635,8 +619,6 @@ class ContentWriteCoordinator:
             context_type=context_type,
             tags=tags,
             mode=mode,
-            wait=wait,
-            queue_status=queue_status,
         )
 
     async def _set_directory_tags(
@@ -650,6 +632,7 @@ class ContentWriteCoordinator:
         wait: bool,
         timeout: Optional[float],
     ) -> Dict[str, Any]:
+        del wait, timeout
         updated_uris = await self._collect_directory_tag_targets(
             uri=uri, recursive=recursive, ctx=ctx
         )
@@ -667,15 +650,6 @@ class ContentWriteCoordinator:
                 skipped_count += 1
 
         context_type = context_type_for_uri(applied_uris[0] if applied_uris else updated_uris[0])
-        queue_status = await self._refresh_tags_semantics(
-            root_uri=uri,
-            changed_uri=uri if recursive or not applied_uris else applied_uris[0],
-            context_type=context_type,
-            ctx=ctx,
-            wait=wait,
-            timeout=timeout,
-            recursive=recursive,
-        )
         return self._build_tags_result(
             uri=uri,
             updated_uris=applied_uris,
@@ -685,8 +659,6 @@ class ContentWriteCoordinator:
             context_type=context_type,
             tags=tags,
             mode=mode,
-            wait=wait,
-            queue_status=queue_status,
         )
 
     async def _collect_directory_tag_targets(
@@ -742,36 +714,6 @@ class ContentWriteCoordinator:
         if not updated:
             return None
         return uri
-
-    async def _refresh_tags_semantics(
-        self,
-        *,
-        root_uri: str,
-        changed_uri: str,
-        context_type: str,
-        ctx: RequestContext,
-        wait: bool,
-        timeout: Optional[float],
-        recursive: bool = False,
-    ) -> Optional[Dict[str, Any]]:
-        telemetry_id = get_current_telemetry().telemetry_id
-        if wait and telemetry_id:
-            get_request_wait_tracker().register_request(telemetry_id)
-        try:
-            await self._enqueue_semantic_refresh(
-                root_uri=root_uri,
-                changed_uri=changed_uri,
-                context_type=context_type,
-                ctx=ctx,
-                change_type="modified",
-                recursive=recursive,
-            )
-            if not wait:
-                return None
-            return await self._wait_for_request(telemetry_id=telemetry_id, timeout=timeout)
-        finally:
-            if wait and telemetry_id:
-                get_request_wait_tracker().cleanup(telemetry_id)
 
     async def _resolve_root_uri(
         self,

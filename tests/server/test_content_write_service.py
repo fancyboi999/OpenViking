@@ -870,11 +870,6 @@ async def test_set_tags_updates_vector_record(monkeypatch):
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(_FakeSemanticQueue()),
-    )
-
     result = await coordinator.set_tags(
         uri=file_uri,
         tags=["Env=Prod", " env=prod "],
@@ -882,6 +877,9 @@ async def test_set_tags_updates_vector_record(monkeypatch):
     )
 
     assert result["tags"] == ["env=prod"]
+    assert "semantic_status" not in result
+    assert "vector_status" not in result
+    assert "queue_status" not in result
     assert fake_store.update_calls == [(file_uri, ["env=prod"], "replace")]
 
 
@@ -908,11 +906,6 @@ async def test_set_tags_uses_store_update_api_without_fetch(monkeypatch):
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(_FakeSemanticQueue()),
-    )
-
     result = await coordinator.set_tags(
         uri=file_uri,
         tags=["Env=Prod"],
@@ -949,11 +942,6 @@ async def test_set_tags_append_merges_existing_tags(monkeypatch):
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(_FakeSemanticQueue()),
-    )
-
     result = await coordinator.set_tags(
         uri=file_uri,
         tags=["Env=Prod", " team=search "],
@@ -982,11 +970,6 @@ async def test_set_tags_rejects_non_kv_tags(monkeypatch):
             raise AssertionError("invalid tags must fail before store update")
 
     fake_vfs.vector_store = _FakeVectorStore()
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(_FakeSemanticQueue()),
-    )
-
     with pytest.raises(InvalidArgumentError, match="k=v"):
         await coordinator.set_tags(uri=file_uri, tags=["project-a"], ctx=ctx)
 
@@ -1013,7 +996,6 @@ async def test_set_tags_recursive_directory_updates_descendants(monkeypatch):
         {"uri": nested_file_uri, "isDir": False},
     ]
     coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
-    queue = _FakeSemanticQueue()
 
     class _FakeVectorStore:
         def __init__(self):
@@ -1030,11 +1012,6 @@ async def test_set_tags_recursive_directory_updates_descendants(monkeypatch):
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(queue),
-    )
-
     result = await coordinator.set_tags(
         uri=root_uri,
         tags=["env=prod"],
@@ -1066,9 +1043,6 @@ async def test_set_tags_recursive_directory_updates_descendants(monkeypatch):
             (nested_file_uri, ["env=prod"], "append"),
         ]
     )
-    assert len(queue.messages) == 1
-    assert queue.messages[0].uri == root_uri
-    assert queue.messages[0].recursive is True
 
 
 @pytest.mark.asyncio
@@ -1087,7 +1061,6 @@ async def test_set_tags_recursive_directory_all_missing_vector_records_returns_z
         {"uri": file_uri, "isDir": False},
     ]
     coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
-    queue = _FakeSemanticQueue()
 
     class _FakeVectorStore:
         def __init__(self):
@@ -1100,11 +1073,6 @@ async def test_set_tags_recursive_directory_all_missing_vector_records_returns_z
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(queue),
-    )
-
     result = await coordinator.set_tags(
         uri=root_uri,
         tags=["env=prod"],
@@ -1117,9 +1085,6 @@ async def test_set_tags_recursive_directory_all_missing_vector_records_returns_z
     assert result["skipped_count"] == 3
     assert result["failed_count"] == 0
     assert result["updated_uris"] == []
-    assert len(queue.messages) == 1
-    assert queue.messages[0].uri == root_uri
-    assert queue.messages[0].recursive is True
 
 
 @pytest.mark.asyncio
@@ -1135,7 +1100,6 @@ async def test_set_tags_non_recursive_directory_all_missing_vector_records_retur
     fake_vfs.content[abstract_uri] = "abstract"
     fake_vfs.content[overview_uri] = "overview"
     coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
-    queue = _FakeSemanticQueue()
 
     class _FakeVectorStore:
         def __init__(self):
@@ -1148,11 +1112,6 @@ async def test_set_tags_non_recursive_directory_all_missing_vector_records_retur
 
     fake_store = _FakeVectorStore()
     fake_vfs.vector_store = fake_store
-    monkeypatch.setattr(
-        "openviking.storage.content_write.get_queue_manager",
-        lambda: _FakeQueueManager(queue),
-    )
-
     result = await coordinator.set_tags(
         uri=root_uri,
         tags=["env=prod"],
@@ -1165,6 +1124,36 @@ async def test_set_tags_non_recursive_directory_all_missing_vector_records_retur
     assert result["skipped_count"] == 2
     assert result["failed_count"] == 0
     assert result["updated_uris"] == []
-    assert len(queue.messages) == 1
-    assert queue.messages[0].uri == root_uri
-    assert queue.messages[0].recursive is False
+
+
+@pytest.mark.asyncio
+async def test_set_tags_wait_does_not_trigger_semantic_refresh(monkeypatch):
+    file_uri = "viking://resources/demo/doc.md"
+    root_uri = "viking://resources/demo"
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.USER)
+    fake_vfs = _FakeVikingFS(file_uri=file_uri, root_uri=root_uri)
+    coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
+
+    class _FakeVectorStore:
+        async def update_search_tags(self, uri: str, tags, *, mode: str, ctx=None):
+            del ctx
+            assert uri == file_uri
+            assert list(tags) == ["env=prod"]
+            assert mode == "replace"
+            return True
+
+    fake_vfs.vector_store = _FakeVectorStore()
+
+    result = await coordinator.set_tags(
+        uri=file_uri,
+        tags=["env=prod"],
+        mode="replace",
+        ctx=ctx,
+        wait=True,
+        timeout=5.0,
+    )
+
+    assert result["tags_updated"] is True
+    assert "semantic_status" not in result
+    assert "vector_status" not in result
+    assert "queue_status" not in result

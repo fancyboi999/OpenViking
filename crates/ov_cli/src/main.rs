@@ -508,7 +508,7 @@ enum Commands {
         #[arg(long, value_name = "seconds", help_heading = "Common options")]
         timeout: Option<f64>,
     },
-    /// [Data] Replace explicit retrieval tags for a file or directory
+    /// [Data] Update explicit retrieval tags metadata for a file or directory
     SetTags {
         /// Viking URI
         uri: String,
@@ -521,10 +521,10 @@ enum Commands {
         /// Recursively update descendant files and semantic nodes when target is a directory
         #[arg(long, default_value = "false")]
         recursive: bool,
-        /// Wait for async processing to finish
+        /// Wait for tag metadata update to finish
         #[arg(long, default_value = "false")]
         wait: bool,
-        /// Optional wait timeout in seconds
+        /// Optional wait timeout in seconds for the metadata update
         #[arg(long)]
         timeout: Option<f64>,
     },
