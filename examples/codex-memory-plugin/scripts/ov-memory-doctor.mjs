@@ -169,10 +169,7 @@ export function assessHooksFeature(features, cliFeatures = null) {
   if (hooks === true) {
     return { status: "ok", message: "[features] hooks = true" };
   }
-  if (pluginHooks === true) {
-    return { status: "ok", message: "[features] plugin_hooks = true (legacy; modern Codex uses hooks = true)" };
-  }
-  if (hooks === false || pluginHooks === false) {
+  if (hooks === false) {
     return {
       status: "fail",
       message: `hooks disabled in [features] (hooks=${hooks ?? "unset"}, plugin_hooks=${pluginHooks ?? "unset"})`,
@@ -197,6 +194,19 @@ export function assessHooksFeature(features, cliFeatures = null) {
         fix: "set hooks = true under [features] in ~/.codex/config.toml",
       };
     }
+  }
+
+  // Legacy config only applies when the modern feature cannot be determined.
+  if (pluginHooks === true) {
+    return { status: "ok", message: "[features] plugin_hooks = true (legacy; modern Codex uses hooks = true)" };
+  }
+  if (pluginHooks === false) {
+    return {
+      status: "fail",
+      message: "hooks disabled in [features] (plugin_hooks=false)",
+      detail: "legacy plugin hooks are explicitly disabled",
+      fix: "set plugin_hooks = true for older Codex, or hooks = true for modern Codex under [features] in ~/.codex/config.toml",
+    };
   }
 
   return {

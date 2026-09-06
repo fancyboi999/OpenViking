@@ -59,6 +59,11 @@ mode only), `X-OpenViking-Actor-Peer`, `User-Agent: openviking-memory-codex/<ver
 The open-source server also accepts `X-API-Key` (and prefers it when both are
 sent); the Volcengine-hosted OpenViking Service (`https://api.vikingdb.cn-beijing.volces.com/openviking`) accepts Bearer only.
 
+The doctor checks explicit `features.hooks` first, then the live `hooks` entry
+from `codex features list`. Legacy `plugin_hooks` only decides the result when
+neither supplies a modern feature state. An unavailable probe with no configured
+flag is informational; a live enabled result needs no configuration change.
+
 ## Peer: giving a directory its own memory
 
 ```json

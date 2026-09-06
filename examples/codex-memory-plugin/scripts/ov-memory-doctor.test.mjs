@@ -43,6 +43,33 @@ test("assessHooksFeature: hooks explicitly false in toml", () => {
   assert.match(res.fix, /set hooks = true/);
 });
 
+test("assessHooksFeature: explicit hooks overrides legacy config and live state", () => {
+  for (const hooks of [true, false]) {
+    const cliFeatures = new Map([["hooks", { stage: "stable", enabled: !hooks }]]);
+    const res = assessHooksFeature({ hooks, plugin_hooks: !hooks }, cliFeatures);
+    assert.equal(res.status, hooks ? "ok" : "fail");
+    assert.match(res.message, hooks ? /\[features\] hooks = true/ : /hooks disabled in \[features\]/);
+  }
+});
+
+test("assessHooksFeature: live hooks overrides conflicting legacy config", () => {
+  for (const enabled of [true, false]) {
+    const cliFeatures = new Map([["hooks", { stage: "stable", enabled }]]);
+    const res = assessHooksFeature({ plugin_hooks: !enabled }, cliFeatures);
+    assert.equal(res.status, enabled ? "ok" : "fail");
+    assert.match(res.message, enabled ? /hooks enabled by default/ : /hooks feature is disabled in Codex/);
+  }
+});
+
+test("assessHooksFeature: legacy config applies when CLI has no modern hooks entry", () => {
+  for (const enabled of [true, false]) {
+    const cliFeatures = new Map([["plugin_hooks", { stage: "experimental", enabled }]]);
+    const res = assessHooksFeature({ plugin_hooks: enabled }, cliFeatures);
+    assert.equal(res.status, enabled ? "ok" : "fail");
+    assert.match(res.message, /plugin_hooks/);
+  }
+});
+
 test("assessHooksFeature: plugin_hooks explicitly false in toml", () => {
   const res = assessHooksFeature({ plugin_hooks: false });
   assert.equal(res.status, "fail");
