@@ -147,7 +147,9 @@ export function ContextDataPanel({
       isError={isError}
       isLoading={isLoading}
       title={t('contextData.title')}
-      value={isError ? t('requestFailed') : formatNumber(total)}
+      value={
+        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
+      }
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
@@ -194,7 +196,9 @@ export function TodayTokensPanel({
       isError={isError}
       isLoading={isLoading}
       title={t('todayTokens.title')}
-      value={isError ? t('requestFailed') : formatNumber(total)}
+      value={
+        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
+      }
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
@@ -241,7 +245,9 @@ export function TodayRetrievalsPanel({
       isError={isError}
       isLoading={isLoading}
       title={t('todayRetrievals.title')}
-      value={isError ? t('requestFailed') : formatNumber(total)}
+      value={
+        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
+      }
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
