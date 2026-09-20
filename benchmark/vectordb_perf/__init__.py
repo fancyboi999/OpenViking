@@ -1,1 +1,0 @@
-"""VectorDB adapter performance benchmark."""
