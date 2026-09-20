@@ -54,6 +54,9 @@ it.each(['loading', 'disabled', 'error', 'zero'])(
       </QueryClientProvider>,
     )
     try {
+      if (state === 'disabled') await screen.findByText('disabled.title')
+      if (state === 'error') await screen.findByText('error.title')
+      if (state === 'zero') await screen.findByText('empty.title')
       if (state === 'zero') {
         await waitFor(() => expect(screen.getByText('0%')).toBeTruthy())
         expect(screen.queryByText('—')).toBeNull()
