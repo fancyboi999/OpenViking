@@ -9,6 +9,8 @@ const activity = {
       count: '{{count}} session',
       count_other: '{{count}} sessions',
       loading: 'Loading sessions...',
+      loadFailed: 'Could not load sessions',
+      retry: 'Retry',
       emptyTitle: 'No sessions yet',
       emptyDescription: 'Select the plus button to start a new conversation.',
       deleteSession: 'Delete “{{title}}”',

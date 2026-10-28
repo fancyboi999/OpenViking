@@ -9,6 +9,8 @@ const activity = {
       count: '{{count}} 个会话',
       count_other: '{{count}} 个会话',
       loading: '正在加载会话...',
+      loadFailed: '会话加载失败',
+      retry: '重试',
       emptyTitle: '还没有会话',
       emptyDescription: '点击右上角的加号开始一段新对话。',
       deleteSession: '删除“{{title}}”',
