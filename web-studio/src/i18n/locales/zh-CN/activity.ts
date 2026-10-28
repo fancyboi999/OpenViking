@@ -5,6 +5,7 @@ const activity = {
     },
     threadList: {
       title: '会话',
+      backToList: '返回会话列表',
       newSession: '新建会话',
       count: '{{count}} 个会话',
       count_other: '{{count}} 个会话',

@@ -5,6 +5,7 @@ const activity = {
     },
     threadList: {
       title: 'Sessions',
+      backToList: 'Back to sessions',
       newSession: 'New Session',
       count: '{{count}} session',
       count_other: '{{count}} sessions',
