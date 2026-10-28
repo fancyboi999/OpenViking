@@ -46,11 +46,18 @@ class WriteContentRequest(BaseModel):
     content: str
     mode: str = "replace"
     wait: bool = False
+    timeout: float | None = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated compatibility parameter; accepted and ignored.",
+    )
     telemetry: TelemetryRequest = False
     processing_mode: ProcessingMode = DEFAULT_PROCESSING_MODE
     tags: list[str] | None = None
     tag_mode: Literal["replace", "append", "clear"] = "replace"
     acl: AclSpec | None = None
+    # Who made the edit; versions of Compile outputs record it (console edit = manual).
+    edit_source: Literal["manual", "agent", "compile"] = "agent"
 
 
 class BatchWriteOperation(BaseModel):
@@ -79,10 +86,18 @@ class BatchWriteRequest(BaseModel):
     root_uri: str
     operations: list[BatchWriteOperation]
     wait: bool = True
+    timeout: float | None = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated compatibility parameter; accepted and ignored.",
+    )
     telemetry: TelemetryRequest = False
     # Preserve conflicting target files and return their URI/reason while writing other files.
     skip_conflicts: bool = False
+    # Save content without semantic or vector work; the caller schedules processing.
+    defer_processing: bool = False
     processing_mode: ProcessingMode = DEFAULT_PROCESSING_MODE
+    edit_source: Literal["manual", "agent", "compile"] = "agent"
 
 
 class SetTagsRequest(BaseModel):
@@ -266,6 +281,7 @@ async def write(
             tags=request.tags,
             tag_mode=request.tag_mode,
             acl=request.acl,
+            edit_source=request.edit_source,
         ),
     )
     return Response(
@@ -297,7 +313,9 @@ async def batch_write(
             ctx=_ctx,
             wait=request.wait,
             skip_conflicts=request.skip_conflicts,
+            defer_processing=request.defer_processing,
             processing_mode=request.processing_mode,
+            edit_source=request.edit_source,
         ),
     )
     return Response(
