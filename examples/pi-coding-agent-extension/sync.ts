@@ -31,7 +31,8 @@ export class SyncManager {
   private logger: ReturnType<typeof createLogger>;
   private ovSessionId: string | null = null;
   private syncedEntryCount = 0;
-  private syncedEntryId: string | null = null;
+  /** Entry at the numeric watermark; detects a same-length sibling branch. */
+  private syncedEntryId = "";
   private persistEntry?: (customType: string, data: unknown) => void;
   /**
    * Messages this session lost for good: non-retryable (4xx) rejections and
@@ -77,15 +78,14 @@ export class SyncManager {
     return extracted.payloads.length;
   }
 
-  restoreWatermark(n: number): void {
-    const next = Math.max(0, Math.floor(Number(n) || 0));
-    this.syncedEntryCount = next;
-    this.syncedEntryId = null;
+  restoreWatermark(n: number, branch: any[]): void {
+    this.syncedEntryCount = Math.max(0, Math.floor(Number(n) || 0));
+    this.syncedEntryId = branch[this.syncedEntryCount - 1]?.id || "";
   }
 
   /** Restore only this OV session's progress on the active Pi branch. */
   restoreCapture(branch: any[], allowLegacy = false): void {
-    this.restoreWatermark(0);
+    this.restoreWatermark(0, branch);
     for (let i = branch.length - 1; i >= 0; i--) {
       const entry = branch[i];
       if (entry?.type !== "custom") continue;
@@ -108,7 +108,7 @@ export class SyncManager {
         const count = entry.data?.syncedEntryCount;
         if (Number.isSafeInteger(count) && count >= 0 && count <= i) {
           this.syncedEntryCount = count;
-          this.syncedEntryId = branch[count - 1]?.id ?? null;
+          this.syncedEntryId = branch[count - 1]?.id || "";
           return;
         }
       }
@@ -254,8 +254,16 @@ export class SyncManager {
       if (anchor >= 0) this.syncedEntryCount = anchor + 1;
       else this.restoreCapture(branch);
     }
-    const extracted = extractBranchCapturePayloads(branch, this.syncedEntryCount, this.config);
-    if (extracted.resetWatermark) this.syncedEntryCount = 0;
+    const extracted = extractBranchCapturePayloads(
+      branch,
+      this.syncedEntryCount,
+      this.config,
+      this.syncedEntryId,
+    );
+    if (extracted.resetWatermark) {
+      this.syncedEntryCount = 0;
+      this.syncedEntryId = "";
+    }
     const sent = await this.sendPayloads(extracted.payloads);
     const added = sent.accepted;
     let tokens = 0;
@@ -266,7 +274,7 @@ export class SyncManager {
     if (added === extracted.payloads.length) {
       this.syncedEntryCount = extracted.nextEntryCount;
       const last = branch.at(-1);
-      this.syncedEntryId = last?.id ?? null;
+      this.syncedEntryId = extracted.nextEntryId;
       // No checkpoint-only chain when takeover syncs the same branch again.
       if (last?.id && !(last.type === "custom" && last.customType === "ov-capture")) {
         this.persistEntry?.("ov-capture", {
