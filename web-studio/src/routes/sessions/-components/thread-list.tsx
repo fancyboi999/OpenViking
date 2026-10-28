@@ -45,7 +45,7 @@ export function ThreadList({ activeSessionId }: ThreadListProps) {
     error: listError,
     isError,
     isFetching,
-    isLoading,
+    isPending,
     refetch,
   } = useSessionListByRecency()
   const { getTitle, removeTitle, setTitle } = useSessionTitles(identityScopeKey)
@@ -106,7 +106,7 @@ export function ThreadList({ activeSessionId }: ThreadListProps) {
               ? t('studio:sessionRecords')
               : t('threadList.title')}
           </h1>
-          {!isLoading && (!isError || sessions.length > 0) ? (
+          {!isPending && (!isError || sessions.length > 0) ? (
             <p className="mt-0.5 text-xs text-muted-foreground">
               {t('threadList.count', { count: sessions.length })}
             </p>
@@ -155,7 +155,7 @@ export function ThreadList({ activeSessionId }: ThreadListProps) {
             </Button>
           </div>
         ) : null}
-        {isLoading ? (
+        {isPending ? (
           <div className="flex h-28 items-center justify-center gap-2 text-sm text-muted-foreground">
             <LoaderCircleIcon className="size-4 animate-spin" />
             <span>{t('threadList.loading')}</span>
